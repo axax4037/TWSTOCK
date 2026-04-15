@@ -39,6 +39,23 @@ if 'large_orders' not in st.session_state:
     st.session_state.large_orders = []
 if 'big_player_flow' not in st.session_state:
     st.session_state.big_player_flow = {'buy': 0, 'sell': 0, 'net': 0}
+if 'stock_name_cache' not in st.session_state:
+    st.session_state.stock_name_cache = {}
+
+# ==========================================
+# 2. 輔助函式：股票名稱查詢
+# ==========================================
+@st.cache_data(ttl=3600)  # 快取 1 小時
+def get_stock_name(symbol, sdk):
+    """查詢股票名稱"""
+    try:
+        # 使用 securities API 查詢標的基本資訊
+        res = sdk.marketdata.rest_client.stock.securities.get(params={'symbol': symbol})
+        if res and 'data' in res and len(res['data']) > 0:
+            return res['data'][0].get('name', '未知名稱')
+        return '未知名稱'
+    except Exception as e:
+        return '查詢失敗'
 
 # ==========================================
 # 2. 核心計算函式
@@ -398,14 +415,27 @@ if st.sidebar.button("🔌 連線富邦 API"):
             st.sidebar.error(f"連線發生錯誤：{e}")
 
 st.sidebar.markdown("---")
-st.sidebar.title("🎯 標的選擇")
-target_symbol = st.sidebar.text_input("請輸入台股代碼", value="2330")
+st.sidebar.title("🎯 標的選擇與監控")
+target_symbol = st.sidebar.text_input("請輸入台股代碼 (例如：2317, 2881)", value="2330")
+
+# 查詢並顯示股票名稱
+stock_name = "..."
+if st.session_state.is_logged_in and target_symbol:
+    stock_name = get_stock_name(target_symbol, st.session_state.fubon_sdk)
+    if stock_name not in ["...", "未知名稱", "查詢失敗"]:
+        st.sidebar.info(f"🏷️ **{target_symbol} {stock_name}**")
+    else:
+        st.sidebar.warning(f"⚠️ 無法查詢 {target_symbol} 的股票名稱")
+elif not st.session_state.is_logged_in:
+    st.sidebar.warning("請先連線 API 以查詢股票名稱")
+
 large_order_threshold = st.sidebar.number_input("🚨 大單門檻 (張)", value=50, min_value=1)
 
 # ==========================================
 # 4. 主畫面
 # ==========================================
-st.title("📊 台股全方位戰情室")
+display_title = f"{target_symbol} {stock_name}" if stock_name not in ["...", "未知名稱", "查詢失敗"] else f"{target_symbol}"
+st.title(f"📊 台股全方位戰情室：{display_title}")
 st.markdown("**功能清單：** 即時成交量 | 即時大單 | 大戶動向 | 成交量預測 | 漲跌停預測 | 盤後資料 | 操作建議 | 策略回測")
 
 if not st.session_state.is_logged_in:
@@ -436,7 +466,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 
 # --- Tab 1: 即時戰情 ---
 with tab1:
-    st.header(f"🔥 {target_symbol} 即時戰情")
+    st.header(f"🔥 {display_title} 即時戰情")
     
     # 第一列：關鍵指標
     col1, col2, col3, col4 = st.columns(4)
@@ -489,7 +519,7 @@ with tab1:
 
 # --- Tab 2: 技術分析 ---
 with tab2:
-    st.header(f"📈 {target_symbol} 技術分析")
+    st.header(f"📈 {display_title} 技術分析")
     
     # 操作建議
     signal, color = generate_trading_signal(df)
@@ -530,7 +560,7 @@ with tab2:
 
 # --- Tab 3: 預測中心 ---
 with tab3:
-    st.header(f"🔮 {target_symbol} 預測中心")
+    st.header(f"🔮 {display_title} 預測中心")
     
     col1, col2 = st.columns(2)
     
@@ -623,7 +653,7 @@ with tab3:
 
 # --- Tab 4: 策略回測 ---
 with tab4:
-    st.header(f"💰 {target_symbol} 策略回測模擬")
+    st.header(f"💰 {display_title} 策略回測模擬")
     
     st.markdown("""
     **策略說明：**
@@ -670,7 +700,7 @@ with tab4:
 
 # --- Tab 5: 盤後資料 ---
 with tab5:
-    st.header(f"📋 {target_symbol} 盤後資料")
+    st.header(f"📋 {display_title} 盤後資料")
     
     # 今日重點數據
     st.subheader("📊 今日重點數據")
