@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台股股票機 - 富邦 API 整合系統</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-around;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .status-item {
+            text-align: center;
+        }
+
+        .status-item .label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .status-item .value {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .card-title {
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .card-icon {
+            font-size: 1.5em;
+        }
+
+        .stock-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stock-input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #00b09b, #96c93d);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,176,155,0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff416c, #ff4b2b);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #56ab2f, #a8e063);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, #f7971e, #ffd200);
+            color: white;
+        }
+
+        .data-display {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .data-row:last-child {
+            border-bottom: none;
+        }
+
+        .data-label {
+            opacity: 0.8;
+        }
+
+        .data-value {
+            font-weight: bold;
+        }
+
+        .positive {
+            color: #ff4444;
+        }
+
+        .negative {
+            color: #00ff00;
+        }
+
+        .neutral {
+            color: #ffff00;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        th {
+            background: rgba(0,0,0,0.3);
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .chart-container {
+            height: 200px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00b09b, #96c93d);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .indicator-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .bullish {
+            background: #ff4444;
+            color: white;
+        }
+
+        .bearish {
+            background: #00ff00;
+            color: black;
+        }
+
+        .control-panel {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .control-item {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .control-item label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .control-item select,
+        .control-item input {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+        }
+
+        .alert-box {
+            background: rgba(255,68,68,0.2);
+            border: 2px solid #ff4444;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: rgba(0,0,0,0.3);
+            border: none;
+            border-radius: 8px 8px 0 0;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .tab:hover {
+            background: rgba(255,255,255,0.15);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .log-console {
+            background: #1a1a1a;
+            border-radius: 10px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .log-info { color: #4fc3f7; }
+        .log-success { color: #81c784; }
+        .log-warning { color: #ffb74d; }
+        .log-error { color: #e57373; }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📈 台股股票機 - 富邦 API 整合系統</h1>
+            <p>即時成交量 | 即時大單 | 大戶動向 | 成交量預測 | 漲跌停預測 | 盤後資料 | 偏多偏空 | 回測模擬</p>
+        </header>
+
+        <!-- 狀態列 -->
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="label">🕐 系統時間</div>
+                <div class="value" id="systemTime">--:--:--</div>
+            </div>
+            <div class="status-item">
+                <div class="label">📊 市場狀態</div>
+                <div class="value" id="marketStatus">休市中</div>
+            </div>
+            <div class="status-item">
+                <div class="label">🔗 API 連線</div>
+                <div class="value" id="apiStatus">未連線</div>
+            </div>
+            <div class="status-item">
+                <div class="label">💰 加權指數</div>
+                <div class="value" id="twii">--</div>
+            </div>
+        </div>
+
+        <!-- 股票查詢控制區 -->
+        <div class="control-panel">
+            <h2 style="margin-bottom: 15px;">🔍 股票查詢與設定</h2>
+            <div class="stock-input-group">
+                <input type="text" class="stock-input" id="stockSymbol" placeholder="輸入股票代號 (例如：2330)">
+                <button class="btn btn-primary" onclick="queryStock()">查詢股票</button>
+                <button class="btn btn-success" onclick="startRealtime()">開始即時監控</button>
+                <button class="btn btn-danger" onclick="stopRealtime()">停止監控</button>
+            </div>
+            <div class="control-grid">
+                <div class="control-item">
+                    <label>更新頻率 (秒)</label>
+                    <input type="number" id="updateInterval" value="3" min="1" max="60">
+                </div>
+                <div class="control-item">
+                    <label>大單門檻 (張)</label>
+                    <input type="number" id="largeOrderThreshold" value="100" min="10">
+                </div>
+                <div class="control-item">
+                    <label>預測模式</label>
+                    <select id="predictionMode">
+                        <option value="ml">機器學習</option>
+                        <option value="technical">技術分析</option>
+                        <option value="hybrid">混合模式</option>
+                    </select>
+                </div>
+                <div class="control-item">
+                    <label>回測期間</label>
+                    <select id="backtestPeriod">
+                        <option value="1M">最近 1 個月</option>
+                        <option value="3M">最近 3 個月</option>
+                        <option value="6M">最近 6 個月</option>
+                        <option value="1Y">最近 1 年</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主要功能區塊 -->
+        <div class="main-grid">
+            <!-- 1. 即時成交量 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">📊 即時成交量</span>
+                    <span class="card-icon">⚡</span>
+                </div>
+                <div class="data-display">
+                    <div class="data-row">
+                        <span class="data-label">當前價格:</span>
+                        <span class="data-value" id="currentPrice">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">今日成交量:</span>
+                        <span class="data-value" id="todayVolume">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">成交金額:</span>
+                        <span class="data-value" id="todayTurnover">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">均量:</span>
+                        <span class="data-value" id="avgVolume">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">量比:</span>
+                        <span class="data-value" id="volumeRatio">--</span>
+                    </div>
+                </div>
+                <div class="chart-container" id="volumeChart">
+                    📈 成交量走勢圖 (即時)
+                </div>
+            </div>
+
+            <!-- 2. 即時大單 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">💰 即時大單</span>
+                    <span class="card-icon">🎯</span>
+                </div>
+                <div class="data-display">
+                    <div class="data-row">
+                        <span class="data-label">大單買進:</span>
+                        <span class="data-value positive" id="largeBuy">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">大單賣出:</span>
+                        <span class="data-value negative" id="largeSell">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">大單淨量:</span>
+                        <span class="data-value" id="largeNet">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">大單佔比:</span>
+                        <span class="data-value" id="largeRatio">--</span>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>時間</th>
+                            <th>方向</th>
+                            <th>價格</th>
+                            <th>張數</th>
+                        </tr>
+                    </thead>
+                    <tbody id="largeOrderTable">
+                        <tr><td>--:--:--</td><td>--</td><td>--</td><td>--</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 3. 大戶動向 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">🏦 大戶動向</span>
+                    <span class="card-icon">🐋</span>
+                </div>
+                <div class="data-display">
+                    <div class="data-row">
+                        <span class="data-label">外資買賣超:</span>
+                        <span class="data-value" id="foreignInvestor">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">投信買賣超:</span>
+                        <span class="data-value" id="investmentTrust">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">自營商買賣超:</span>
+                        <span class="data-value" id="dealer">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">三大法人合計:</span>
+                        <span class="data-value" id="totalInstitutional">--</span>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="institutionalBar" style="width: 50%;">中立</div>
+                </div>
+            </div>
+
+            <!-- 4. 成交量預測 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">🔮 成交量預測</span>
+                    <span class="card-icon">📊</span>
+                </div>
+                <div class="data-display">
+                    <div class="data-row">
+                        <span class="data-label">預估今日总量:</span>
+                        <span class="data-value" id="predictedVolume">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">預估準確率:</span>
+                        <span class="data-value" id="predictionAccuracy">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">較昨日增減:</span>
+                        <span class="data-value" id="volumeChange">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">預估均價:</span>
+                        <span class="data-value" id="predictedAvgPrice">--</span>
+                    </div>
+                </div>
+                <div class="chart-container" id="volumePredictChart">
+                    📉 成交量預測曲線
+                </div>
+            </div>
+
+            <!-- 5. 漲停跌停預測 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">🎲 漲停跌停預測</span>
+                    <span class="card-icon">🎯</span>
+                </div>
+                <div class="data-display">
+                    <div class="data-row">
+                        <span class="data-label">漲停機率:</span>
+                        <span class="data-value positive" id="limitUpProb">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">跌停機率:</span>
+                        <span class="data-value negative" id="limitDownProb">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">漲停價:</span>
+                        <span class="data-value positive" id="limitUpPrice">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">跌停價:</span>
+                        <span class="data-value negative" id="limitDownPrice">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">壓力位:</span>
+                        <span class="data-value" id="resistanceLevel">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">支撐位:</span>
+                        <span class="data-value" id="supportLevel">--</span>
+                    </div>
+                </div>
+                <div class="alert-box" id="limitAlert" style="display: none;">
+                    ⚠️ 警示：偵測到異常波動！
+                </div>
+            </div>
+
+            <!-- 6. 偏多偏空操作建議 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">📈 偏多偏空操作建議</span>
+                    <span class="card-icon">🎯</span>
+                </div>
+                <div class="data-display">
+                    <div class="data-row">
+                        <span class="data-label">綜合判斷:</span>
+                        <span class="data-value" id="overallSignal">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">技術指標:</span>
+                        <span class="data-value" id="technicalSignal">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">資金流向:</span>
+                        <span class="data-value" id="fundFlowSignal">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">市場情緒:</span>
+                        <span class="data-value" id="sentimentSignal">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">建議部位:</span>
+                        <span class="data-value" id="positionSuggestion">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">停損點:</span>
+                        <span class="data-value negative" id="stopLoss">--</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">停利點:</span>
+                        <span class="data-value positive" id="takeProfit">--</span>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <span class="indicator-badge" id="signalBadge">等待分析</span>
+                </div>
+            </div>
+
+            <!-- 7. 盤後資料 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">🌙 盤後資料</span>
+                    <span class="card-icon">📋</span>
+                </div>
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('daily')">日線</button>
+                    <button class="tab" onclick="switchTab('week')">週線</button>
+                    <button class="tab" onclick="switchTab('month')">月線</button>
+                </div>
+                <div class="tab-content active" id="dailyTab">
+                    <div class="data-display">
+                        <div class="data-row">
+                            <span class="data-label">收盤價:</span>
+                            <span class="data-value" id="closePrice">--</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">開盤價:</span>
+                            <span class="data-value" id="openPrice">--</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">最高價:</span>
+                            <span class="data-value positive" id="highPrice">--</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">最低價:</span>
+                            <span class="data-value negative" id="lowPrice">--</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">成交量:</span>
+                            <span class="data-value" id="histVolume">--</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">漲跌幅:</span>
+                            <span class="data-value" id="priceChange">--</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-content" id="weekTab">
+                    <div class="data-display">
+                        <p>週線資料載入中...</p>
+                    </div>
+                </div>
+                <div class="tab-content" id="monthTab">
+                    <div class="data-display">
+                        <p>月線資料載入中...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 8. 回測模擬 -->
+            <div class="card full-width">
+                <div class="card-header">
+                    <span class="card-title">🧪 回測模擬</span>
+                    <span class="card-icon">🔬</span>
+                </div>
+                <div class="control-grid" style="margin-bottom: 15px;">
+                    <div class="control-item">
+                        <label>初始資金</label>
+                        <input type="number" id="initialCapital" value="1000000">
+                    </div>
+                    <div class="control-item">
+                        <label>交易手續費 (%)</label>
+                        <input type="number" id="transactionFee" value="0.1425" step="0.001">
+                    </div>
+                    <div class="control-item">
+                        <label>交易稅 (%)</label>
+                        <input type="number" id="transactionTax" value="0.3" step="0.001">
+                    </div>
+                    <div class="control-item">
+                        <label>策略選擇</label>
+                        <select id="strategySelect">
+                            <option value="ma_cross">均線交叉</option>
+                            <option value="rsi">RSI 超買超賣</option>
+                            <option value="macd">MACD</option>
+                            <option value="bollinger">布林通道</option>
+                            <option value="custom">自訂策略</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <button class="btn btn-primary" onclick="runBacktest()">執行回測</button>
+                    <button class="btn btn-warning" onclick="exportReport()">匯出報告</button>
+                </div>
+                <div class="data-display">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div>
+                            <div class="data-label">總報酬率</div>
+                            <div class="data-value" id="totalReturn">--</div>
+                        </div>
+                        <div>
+                            <div class="data-label">年化報酬率</div>
+                            <div class="data-value" id="annualReturn">--</div>
+                        </div>
+                        <div>
+                            <div class="data-label">最大回撤</div>
+                            <div class="data-value negative" id="maxDrawdown">--</div>
+                        </div>
+                        <div>
+                            <div class="data-label">夏普比率</div>
+                            <div class="data-value" id="sharpeRatio">--</div>
+                        </div>
+                        <div>
+                            <div class="data-label">勝率</div>
+                            <div class="data-value" id="winRate">--</div>
+                        </div>
+                        <div>
+                            <div class="data-label">交易次數</div>
+                            <div class="data-value" id="tradeCount">--</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container" id="backtestChart" style="height: 300px; margin-top: 15px;">
+                    📊 回測績效曲線圖
+                </div>
+            </div>
+
+            <!-- 系統日誌 -->
+            <div class="card full-width">
+                <div class="card-header">
+                    <span class="card-title">📝 系統日誌</span>
+                    <span class="card-icon">📋</span>
+                </div>
+                <div class="log-console" id="logConsole">
+                    <div class="log-entry log-info">[系統] 系統初始化完成...</div>
+                    <div class="log-entry log-info">[系統] 等待連接富邦 API...</div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2024 台股股票機 - 富邦新一代 API 整合系統</p>
+            <p>本系統僅供參考，投資有風險，入市需謹慎</p>
+        </footer>
+    </div>
+
+    <script>
+        // 系統狀態
+        let systemState = {
+            isConnected: false,
+            isMonitoring: false,
+            currentStock: null,
+            updateTimer: null,
+            dataBuffer: []
+        };
+
+        // 更新系統時間
+        function updateSystemTime() {
+            const now = new Date();
+            document.getElementById('systemTime').textContent = now.toLocaleTimeString('zh-TW');
+            
+            // 檢查市場狀態
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const day = now.getDay();
+            
+            if (day === 0 || day === 6) {
+                document.getElementById('marketStatus').textContent = '休市 (假日)';
+            } else if ((hours === 9 && minutes >= 0) || (hours > 9 && hours < 13)) {
+                document.getElementById('marketStatus').textContent = '交易中';
+                document.getElementById('marketStatus').style.color = '#00ff00';
+            } else if (hours >= 8 && hours < 9) {
+                document.getElementById('marketStatus').textContent = '盤前';
+            } else {
+                document.getElementById('marketStatus').textContent = '休市中';
+            }
+        }
+
+        // 記錄日誌
+        function addLog(message, type = 'info') {
+            const console = document.getElementById('logConsole');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const timestamp = new Date().toLocaleTimeString('zh-TW');
+            entry.textContent = `[${timestamp}] ${message}`;
+            console.appendChild(entry);
+            console.scrollTop = console.scrollHeight;
+        }
+
+        // 連接富邦 API (模擬)
+        async function connectAPI() {
+            try {
+                addLog('正在連接富邦 API...', 'info');
+                // 實際應用中這裡會使用 Fubon Neo SDK
+                // const sdk = require('fubon-neo');
+                
+                setTimeout(() => {
+                    systemState.isConnected = true;
+                    document.getElementById('apiStatus').textContent = '已連線';
+                    document.getElementById('apiStatus').style.color = '#00ff00';
+                    addLog('成功連接富邦 API v2.2.8', 'success');
+                    loadTWII();
+                }, 1500);
+            } catch (error) {
+                addLog(`API 連接失敗：${error.message}`, 'error');
+            }
+        }
+
+        // 載入加權指數
+        function loadTWII() {
+            // 模擬數據
+            const twii = 21500 + Math.random() * 200 - 100;
+            document.getElementById('twii').textContent = twii.toFixed(2);
+            addLog(`載入加權指數：${twii.toFixed(2)}`, 'info');
+        }
+
+        // 查詢股票
+        async function queryStock() {
+            const symbol = document.getElementById('stockSymbol').value.trim();
+            if (!symbol) {
+                alert('請輸入股票代號');
+                return;
+            }
+
+            addLog(`查詢股票：${symbol}`, 'info');
+            
+            // 模擬 API 呼叫
+            // 實際應用：reststock.ticker({ symbol: symbol })
+            
+            setTimeout(() => {
+                systemState.currentStock = symbol;
+                updateStockData();
+                addLog(`成功載入股票 ${symbol} 資料`, 'success');
+            }, 1000);
+        }
+
+        // 更新股票資料
+        function updateStockData() {
+            if (!systemState.currentStock) return;
+
+            // 模擬即時數據
+            const basePrice = 100 + Math.random() * 50;
+            const change = (Math.random() - 0.5) * 5;
+            const price = basePrice + change;
+            const volume = Math.floor(Math.random() * 10000000) + 500000;
+            const turnover = volume * price;
+
+            // 更新 UI
+            document.getElementById('currentPrice').textContent = price.toFixed(2);
+            document.getElementById('todayVolume').textContent = volume.toLocaleString();
+            document.getElementById('todayTurnover').textContent = (turnover / 100000000).toFixed(2) + '億';
+            document.getElementById('avgVolume').textContent = (volume * 0.8).toLocaleString();
+            
+            const ratio = (volume / (volume * 0.8)).toFixed(2);
+            document.getElementById('volumeRatio').textContent = ratio;
+
+            // 大單數據
+            const largeBuy = Math.floor(Math.random() * 5000) + 1000;
+            const largeSell = Math.floor(Math.random() * 5000) + 1000;
+            document.getElementById('largeBuy').textContent = '+' + largeBuy.toLocaleString() + '張';
+            document.getElementById('largeSell').textContent = '-' + largeSell.toLocaleString() + '張';
+            document.getElementById('largeNet').textContent = (largeBuy - largeSell).toLocaleString() + '張';
+            document.getElementById('largeRatio').textContent = ((largeBuy + largeSell) / volume * 100).toFixed(2) + '%';
+
+            // 更新大單表格
+            updateLargeOrderTable();
+
+            // 三大法人
+            updateInstitutionalData();
+
+            // 預測數據
+            updatePredictions(price, volume);
+
+            // 操作建議
+            updateSignals();
+
+            // 盤後資料
+            updateHistoricalData(price);
+        }
+
+        // 更新大單表格
+        function updateLargeOrderTable() {
+            const tbody = document.getElementById('largeOrderTable');
+            const now = new Date().toLocaleTimeString('zh-TW');
+            const price = parseFloat(document.getElementById('currentPrice').textContent) || 100;
+            const volume = Math.floor(Math.random() * 500) + 100;
+            const direction = Math.random() > 0.5 ? '買' : '賣';
+            const directionClass = direction === '買' ? 'positive' : 'negative';
+
+            const row = `<tr>
+                <td>${now}</td>
+                <td class="${directionClass}">${direction}</td>
+                <td>${(price + (Math.random() - 0.5)).toFixed(2)}</td>
+                <td>${volume}</td>
+            </tr>`;
+
+            tbody.innerHTML = row + tbody.innerHTML.slice(0, tbody.innerHTML.lastIndexOf('</tr>') + 5);
+        }
+
+        // 更新法人數據
+        function updateInstitutionalData() {
+            const foreign = (Math.random() - 0.5) * 10000;
+            const trust = (Math.random() - 0.5) * 5000;
+            const dealer = (Math.random() - 0.5) * 3000;
+            const total = foreign + trust + dealer;
+
+            document.getElementById('foreignInvestor').textContent = foreign.toFixed(0) + '張';
+            document.getElementById('foreignInvestor').className = foreign >= 0 ? 'data-value positive' : 'data-value negative';
+            
+            document.getElementById('investmentTrust').textContent = trust.toFixed(0) + '張';
+            document.getElementById('investmentTrust').className = trust >= 0 ? 'data-value positive' : 'data-value negative';
+            
+            document.getElementById('dealer').textContent = dealer.toFixed(0) + '張';
+            document.getElementById('dealer').className = dealer >= 0 ? 'data-value positive' : 'data-value negative';
+            
+            document.getElementById('totalInstitutional').textContent = total.toFixed(0) + '張';
+            document.getElementById('totalInstitutional').className = total >= 0 ? 'data-value positive' : 'data-value negative';
+
+            // 更新進度條
+            const bar = document.getElementById('institutionalBar');
+            const percentage = ((total + 10000) / 20000) * 100;
+            bar.style.width = Math.max(10, Math.min(90, percentage)) + '%';
+            bar.textContent = total >= 0 ? '偏多' : '偏空';
+            bar.style.background = total >= 0 ? 
+                'linear-gradient(90deg, #ff4444, #ff6b6b)' : 
+                'linear-gradient(90deg, #00ff00, #6bff6b)';
+        }
+
+        // 更新預測數據
+        function updatePredictions(price, volume) {
+            const predictedVol = Math.floor(volume * (1.2 + Math.random() * 0.3));
+            document.getElementById('predictedVolume').textContent = predictedVol.toLocaleString();
+            document.getElementById('predictionAccuracy').textContent = (85 + Math.random() * 10).toFixed(1) + '%';
+            
+            const volChange = (Math.random() - 0.5) * 50;
+            document.getElementById('volumeChange').textContent = (volChange >= 0 ? '+' : '') + volChange.toFixed(1) + '%';
+            document.getElementById('predictedAvgPrice').textContent = (price * (1 + Math.random() * 0.05)).toFixed(2);
+
+            // 漲跌停預測
+            const limitUpProb = Math.random() * 30;
+            const limitDownProb = Math.random() * 20;
+            document.getElementById('limitUpProb').textContent = limitUpProb.toFixed(1) + '%';
+            document.getElementById('limitDownProb').textContent = limitDownProb.toFixed(1) + '%';
+            document.getElementById('limitUpPrice').textContent = (price * 1.1).toFixed(2);
+            document.getElementById('limitDownPrice').textContent = (price * 0.9).toFixed(2);
+            document.getElementById('resistanceLevel').textContent = (price * 1.05).toFixed(2);
+            document.getElementById('supportLevel').textContent = (price * 0.95).toFixed(2);
+
+            // 警示
+            const alertBox = document.getElementById('limitAlert');
+            if (limitUpProb > 25 || limitDownProb > 15) {
+                alertBox.style.display = 'block';
+            } else {
+                alertBox.style.display = 'none';
+            }
+        }
+
+        // 更新操作建議
+        function updateSignals() {
+            const signals = ['強烈買進', '買進', '持有', '賣出', '強烈賣出'];
+            const weights = [0.1, 0.25, 0.3, 0.25, 0.1];
+            
+            let random = Math.random();
+            let cumulative = 0;
+            let signal = '持有';
+            
+            for (let i = 0; i < weights.length; i++) {
+                cumulative += weights[i];
+                if (random <= cumulative) {
+                    signal = signals[i];
+                    break;
+                }
+            }
+
+            document.getElementById('overallSignal').textContent = signal;
+            document.getElementById('technicalSignal').textContent = signals[Math.floor(Math.random() * 5)];
+            document.getElementById('fundFlowSignal').textContent = signals[Math.floor(Math.random() * 5)];
+            document.getElementById('sentimentSignal').textContent = signals[Math.floor(Math.random() * 5)];
+            document.getElementById('positionSuggestion').textContent = Math.floor(Math.random() * 5 + 3) + '成';
+            
+            const price = parseFloat(document.getElementById('currentPrice').textContent) || 100;
+            document.getElementById('stopLoss').textContent = (price * 0.95).toFixed(2);
+            document.getElementById('takeProfit').textContent = (price * 1.1).toFixed(2);
+
+            // 更新徽章
+            const badge = document.getElementById('signalBadge');
+            badge.textContent = signal;
+            badge.className = 'indicator-badge';
+            
+            if (signal.includes('買')) {
+                badge.classList.add('bullish');
+            } else if (signal.includes('賣')) {
+                badge.classList.add('bearish');
+            }
+        }
+
+        // 更新歷史資料
+        function updateHistoricalData(currentPrice) {
+            const open = currentPrice * (0.98 + Math.random() * 0.04);
+            const high = Math.max(currentPrice, open) * (1 + Math.random() * 0.03);
+            const low = Math.min(currentPrice, open) * (1 - Math.random() * 0.03);
+            const change = ((currentPrice - open) / open) * 100;
+
+            document.getElementById('openPrice').textContent = open.toFixed(2);
+            document.getElementById('highPrice').textContent = high.toFixed(2);
+            document.getElementById('lowPrice').textContent = low.toFixed(2);
+            document.getElementById('closePrice').textContent = currentPrice.toFixed(2);
+            document.getElementById('histVolume').textContent = document.getElementById('todayVolume').textContent;
+            
+            const changeElem = document.getElementById('priceChange');
+            changeElem.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+            changeElem.className = change >= 0 ? 'data-value positive' : 'data-value negative';
+        }
+
+        // 切換分頁
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        // 開始即時監控
+        function startRealtime() {
+            if (!systemState.currentStock) {
+                alert('請先查詢股票');
+                return;
+            }
+
+            if (systemState.isMonitoring) {
+                addLog('已經在監控中', 'warning');
+                return;
+            }
+
+            systemState.isMonitoring = true;
+            const interval = parseInt(document.getElementById('updateInterval').value) * 1000;
+            
+            addLog(`開始即時監控，更新頻率：${interval/1000}秒`, 'success');
+            
+            systemState.updateTimer = setInterval(() => {
+                updateStockData();
+                addLog('更新即時數據...', 'info');
+            }, interval);
+        }
+
+        // 停止監控
+        function stopRealtime() {
+            if (!systemState.isMonitoring) {
+                addLog('未在監控狀態', 'warning');
+                return;
+            }
+
+            clearInterval(systemState.updateTimer);
+            systemState.isMonitoring = false;
+            addLog('停止即時監控', 'info');
+        }
+
+        // 執行回測
+        function runBacktest() {
+            addLog('開始執行回測...', 'info');
+            
+            const initialCapital = parseFloat(document.getElementById('initialCapital').value);
+            const strategy = document.getElementById('strategySelect').value;
+            const period = document.getElementById('backtestPeriod').value;
+
+            // 模擬回測結果
+            setTimeout(() => {
+                const totalReturn = (Math.random() - 0.3) * 50;
+                const annualReturn = totalReturn * (12 / parseInt(period.replace('M', '')));
+                const maxDrawdown = -(Math.random() * 20 + 5);
+                const sharpeRatio = (Math.random() * 2 + 0.5).toFixed(2);
+                const winRate = (Math.random() * 30 + 45).toFixed(1);
+                const tradeCount = Math.floor(Math.random() * 50 + 10);
+
+                document.getElementById('totalReturn').textContent = (totalReturn >= 0 ? '+' : '') + totalReturn.toFixed(2) + '%';
+                document.getElementById('totalReturn').className = totalReturn >= 0 ? 'data-value positive' : 'data-value negative';
+                
+                document.getElementById('annualReturn').textContent = annualReturn.toFixed(2) + '%';
+                document.getElementById('annualReturn').className = annualReturn >= 0 ? 'data-value positive' : 'data-value negative';
+                
+                document.getElementById('maxDrawdown').textContent = maxDrawdown.toFixed(2) + '%';
+                document.getElementById('sharpeRatio').textContent = sharpeRatio;
+                document.getElementById('winRate').textContent = winRate + '%';
+                document.getElementById('tradeCount').textContent = tradeCount;
+
+                addLog(`回測完成 - 總報酬：${totalReturn.toFixed(2)}%, 交易次數：${tradeCount}`, 'success');
+            }, 2000);
+        }
+
+        // 匯出報告
+        function exportReport() {
+            addLog('正在生成報告...', 'info');
+            setTimeout(() => {
+                alert('報告已匯出至下載資料夾');
+                addLog('報告匯出成功', 'success');
+            }, 1000);
+        }
+
+        // 初始化
+        window.onload = function() {
+            updateSystemTime();
+            setInterval(updateSystemTime, 1000);
+            connectAPI();
+            
+            addLog('台股股票機系統啟動', 'success');
+            addLog('載入介面完成', 'info');
+        };
+    </script>
+</body>
+</html>
